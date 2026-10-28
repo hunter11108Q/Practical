@@ -1,36 +1,38 @@
-
 pipeline {
     agent any
-
-    triggers {
-        pollSCM('H/5 * * * *')
-    }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Fetching source code from GitHub'
+                echo 'Fetching project from GitHub'
                 checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                echo 'Building the project'
-                bat 'dir'
+                echo 'Building Docker image'
+                bat 'docker build -t practical-web:latest .'
             }
         }
 
         stage('Test') {
             steps {
-                echo 'Testing the project'
-                bat 'if exist Jenkinsfile (echo Jenkinsfile found) else (exit /b 1)'
+                echo 'Checking Docker image'
+                bat 'docker image inspect practical-web:latest'
             }
         }
 
-        stage('Success') {
+        stage('Deploy using Docker') {
             steps {
-                echo 'Continuous Integration completed successfully!'
+                echo 'Deploying web application'
+
+                bat '''
+                    docker rm -f practical-web-container 2>NUL
+                    if errorlevel 1 exit /b 1
+                '''
+
+                bat 'docker run -d --name practical-web-container -p 8081:80 practical-web:latest'
             }
         }
     }
